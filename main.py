@@ -1,6 +1,8 @@
 import configparser
 import json
 import requests
+from tqdm import tqdm
+from time import sleep
 from pprint import pprint
 
 
@@ -47,8 +49,12 @@ def get_largest(size_dict):
 
 def url_dict(url, name):
     'словарь {max_sizes:name} итерируясь по нему добавляем фото'
-    photo_url = {url: name}
-    for k, v in photo_url.items():
+    photo_url = {'file name': name,
+                 'url': url,
+                 }
+    for k, v in tqdm(photo_url.items(), ncols=80):
+        sleep(0.25)
+        pprint(photo_url)
         ya.upload_url(k, v)
 
 
@@ -75,7 +81,7 @@ class YandexDisk:
             requests.put(url, headers=headers, params=params)
         return dir_name
 
-    def upload_url(self, url_file, filename):
+    def upload_url(self, filename, url_file):
         'функция отправляет фото на диск по адресу папки'
         headers = self.get_headers()
         dir_name = self.get_dir()
@@ -104,13 +110,13 @@ class VK:
         params = {'user_ids': self.id}
         response = requests.get(users_get, params={**self.params, **params})
         res = response.json()
-        closed_profile = [value['is_closed'] for k, v in res.items() for value in v ]
+        closed_profile = [value['is_closed'] for k, v in tqdm(res.items(), ncols=80)  for value in v]
         if False in closed_profile:
-            'вызываем функцию сохранения фото'
+            # вызываем функцию сохранения фото
             return self.photo_save()
-
+        #     если профиль закрыт - выводим сообщение
         else:
-            print(f'У данного пользователя закрытый профиль')
+            print(f'У данного пользователя закрытый профиль, скачивание файлов невозможно')
 
     def photo_save(self, count=5):
         photos_get = self.url + 'photos.get'
@@ -128,10 +134,11 @@ class VK:
         достаем лайки-названия файлов, 
         максимальные фото по размеру
         передаем значения в функцию записи '''
-        for photo in photos:
+        for photo in tqdm(photos, ncols=80):
+            sleep(0.25)
             sizes = photo['sizes']
             max_size_url = max(sizes, key=get_largest)['url']
-            name = str(photo['likes']['count'])+'.jpg'
+            name = str(photo['likes']['count']) + '_' + str(photo['date']) + '.jpg'
             'передаем значения в функцию - для создания словаря'
             url_dict(max_size_url, name)
 
@@ -148,4 +155,5 @@ if __name__ == '__main__':
     ya = YandexDisk(token=ya_token)
     vk = VK(access_token, user_id)
     pprint(vk.users_info())
+
 
